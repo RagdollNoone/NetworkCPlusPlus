@@ -19,7 +19,8 @@
 
 #define BACKLOG 10
 
-void sigchild_handler(int s) {
+void
+sigchild_handler(int s) {
     (void)s; // TODO: 这句话啥意思
 
     int saved_errno = errno;

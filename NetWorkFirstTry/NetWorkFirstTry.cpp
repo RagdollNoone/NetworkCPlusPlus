@@ -9,7 +9,8 @@
 #include <string.h>
 #define PORT 21001
 
-void NetWorkFirstTry() {
+void
+NetWorkFirstTry() {
     int server_fd, new_socket, valread;
     struct sockaddr_in address;
     int opt = 1;

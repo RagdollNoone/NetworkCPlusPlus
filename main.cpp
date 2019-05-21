@@ -1,7 +1,8 @@
 #include "NetWorkFirstTry/NetWorkFirstTry.h"
 #include "ShowIp/ShowIp.h"
 
-int main(int argc, char const *argv[])
+int
+main(int argc, char const *argv[])
 {
 
 

@@ -5,6 +5,7 @@
 #ifndef NETWORK_NETWORKFIRSTTRY_H
 #define NETWORK_NETWORKFIRSTTRY_H
 
-void NetWorkFirstTry();
+void
+NetWorkFirstTry();
 
 #endif //NETWORK_NETWORKFIRSTTRY_H
