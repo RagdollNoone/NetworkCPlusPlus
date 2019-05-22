@@ -9,8 +9,8 @@ add_executable(
         NetWorkFirstTry/NetWorkFirstTry.h
         ShowIp/ShowIp.cpp
         ShowIp/ShowIp.h
-#        ClientServer/ServerTcp.cpp
-#        ClientServer/ClientTcp.cpp
-#        ClientServer/ClientUdp.cpp
-#        ClientServer/ServerUdp.cpp
-)
+#        ClientServerTcp/ServerTcp.cpp
+#        ClientServerTcp/ClientTcp.cpp
+#        ClientServerUdp/ClientUdp.cpp
+#        ClientServerUdp/ServerUdp.cpp
+        Select/SelectServer.cpp Select/Select.cpp)
