@@ -3,7 +3,7 @@
 //
 
 
-#include <bits/socket.h>
+#include <sys/socket.h>
 #include <netinet/in.h>
 #include <netdb.h>
 #include <cstring>
@@ -64,7 +64,7 @@ main(void) {
 
         setsockopt(listener, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int));
 
-        if (bind(listener, ai->ai_addr, sizeof(ai->ai_addr)) < 0) {
+        if (bind(listener, p->ai_addr, p->ai_addrlen) < 0) {
             close(listener);
             continue;
         }
@@ -89,7 +89,7 @@ main(void) {
 
     fdmax = listener;
 
-    while(1) { // for(;;)
+    for(;;) {
         read_fds = master;
         if (select(fdmax + 1, &read_fds, NULL, NULL, NULL) == -1) {
             perror("select");
@@ -113,12 +113,11 @@ main(void) {
                             fdmax = newfd;
                         }
 
-                        printf("selectserver: new connection from %s on socket %d\n");
-                        inet_ntop(remoteaddr.ss_family, get_in_addr((sockaddr *)&remoteaddr), remoteIP, INET6_ADDRSTRLEN);
+                        printf("selectserver: new connection from %s on socket %d\n", inet_ntop(remoteaddr.ss_family, get_in_addr((sockaddr *)&remoteaddr), remoteIP, INET6_ADDRSTRLEN), newfd);
                     }
 
                 } else {
-                    if ((nbytes = recv(listener, buf, sizeof(buf), 0)) <= 0) {
+                    if ((nbytes = recv(i, buf, sizeof(buf), 0)) <= 0) {
                         if (nbytes == 0) {
                             printf("selectserver: socket %d hung up\n", i);
                         } else {
@@ -130,8 +129,8 @@ main(void) {
                     } else {
                         for (j = 0; j <= fdmax; j++) {
                             if (FD_ISSET(j, &master)) {
-                                if (j != listener && j != 1) {
-                                    if (send(j, buf, sizeof(buf), 0)) {
+                                if (j != listener && j != i) {
+                                    if (send(j, buf, nbytes, 0) == -1) {
                                         perror("send");
                                     }
                                 }

@@ -13,4 +13,6 @@ add_executable(
 #        ClientServerTcp/ClientTcp.cpp
 #        ClientServerUdp/ClientUdp.cpp
 #        ClientServerUdp/ServerUdp.cpp
-        Select/SelectServer.cpp Select/Select.cpp)
+#        Select/SelectServer.cpp
+#        Select/Select.cpp
+)
