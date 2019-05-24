@@ -15,4 +15,10 @@ add_executable(
 #        ClientServerUdp/ServerUdp.cpp
 #        Select/SelectServer.cpp
 #        Select/Select.cpp
+#        SendControl/SendControl.cpp
+#        SendControl/SendControl.h
+        Float/Float.cpp
+        Float/Float.h
+        Pack/Pack.cpp
+        Pack/Pack.h
 )
