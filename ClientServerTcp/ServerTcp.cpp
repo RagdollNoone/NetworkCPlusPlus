@@ -15,6 +15,8 @@
 #include <sys/wait.h>
 #include <signal.h>
 
+#include "../Message/Message.h"
+
 #define PORT "3490"
 
 #define BACKLOG 10
@@ -42,7 +44,7 @@ get_in_addr(sockaddr *sa) {
 
 int
 main(void) {
-    int sockfd, new_fd;
+    int sockfd, new_fd, nbytes;
     addrinfo hints, *servinfo, *p;
     sockaddr_storage their_addr;
     socklen_t sin_size;
@@ -105,7 +107,22 @@ main(void) {
 
     printf("server: waiting for connections...\n");
 
-    while(1) {
+    DataHeader dh;
+    memset(&dh, 0, sizeof(DataHeader));
+
+    Login login;
+    memset(&login, 0, sizeof(Login));
+
+    LoginResult loginResult;
+    memset(&loginResult, 0, sizeof(LoginResult));
+
+    Logout logout;
+    memset(&logout, 0, sizeof(Logout));
+
+    LogoutResult logoutResult;
+    memset(&logoutResult, 0, sizeof(logoutResult));
+
+    while(true) {
         sin_size = sizeof(their_addr);
         new_fd = accept(sockfd, (sockaddr *)&their_addr, &sin_size);
         if (new_fd == -1) {
@@ -119,12 +136,44 @@ main(void) {
         if (!fork()) {
             close(sockfd);
 
-            if (send(new_fd, "Hello World", 13, 0) == -1) {
-                perror("send");
+            if ((nbytes = recv(new_fd, (char *)&dh, sizeof(DataHeader), 0)) == -1) {
+
+            } else {
+                if (dh.cmd == CMD_LOGIN) {
+
+                    if ((nbytes = recv(new_fd, (char *)&login, sizeof(Login), 0)) == -1) {
+                        printf("Recv Login fail");
+                        loginResult.result = 1;
+                    } else {
+                        printf("Recv Login success, \nuserName is : %s\npassword is : %s\n", login.userName, login.password);
+                        loginResult.result = 0;
+                    }
+
+                    if ((nbytes = send(new_fd, (char *)&loginResult, sizeof(loginResult), 0)) == -1) {
+                        printf("Send LoginResult fail");
+                    } else {
+                        printf("Send LoginResult success, \nresult is : %d", loginResult.result);
+                    }
+
+                } else if (dh.cmd == CMD_LOGOUT) {
+
+                    if ((nbytes = recv(new_fd, (char *)&logout, sizeof(Logout), 0)) == -1) {
+                        printf("Recv Logout fail");
+                        logoutResult.result = 1;
+                    } else {
+                        printf("Recv Logout success, \nuserName is : %s\npassword is : %s\n", login.userName, login.password);
+                        logoutResult.result = 0;
+                    }
+
+                    if ((nbytes = send(new_fd, (char *)&logoutResult, sizeof(logoutResult), 0)) == -1) {
+                        printf("Send LogoutResult fail");
+                    } else {
+                        printf("Send LogoutResult success, \nresult is : %d", logoutResult.result);
+                    }
+
+                }
             }
 
-            close(new_fd);
-            exit(0);
         }
 
         close(new_fd);

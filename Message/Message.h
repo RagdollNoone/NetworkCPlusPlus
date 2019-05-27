@@ -6,8 +6,8 @@
 #define NETWORK_MESSAGE_H
 
 enum CMD {
-    CMD_LOGIN,
-    CMD_LOGOUT
+    CMD_LOGIN = 0,
+    CMD_LOGOUT = 1,
 };
 
 struct DataHeader {
@@ -28,7 +28,7 @@ struct Logout {
     char userName[32];
 };
 
-struct LogoutRsult {
+struct LogoutResult {
     int result;
 };
 
