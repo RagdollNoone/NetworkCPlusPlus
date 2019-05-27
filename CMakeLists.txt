@@ -21,4 +21,5 @@ add_executable(
         Float/Float.h
         Pack/Pack.cpp
         Pack/Pack.h
+        Message/Message.h
 )

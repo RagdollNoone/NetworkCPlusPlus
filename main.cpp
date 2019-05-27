@@ -11,7 +11,7 @@ main(int argc, char const *argv[])
 //    ShowIp();
 //    ShowIp(argc, argv);
 
-    floatTest();
+//    floatTest();
 
     return 0;
 }
