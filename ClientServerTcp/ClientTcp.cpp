@@ -106,7 +106,7 @@ main(int argc, char *argv[]) {
         printf("Please input the cmd: ");
         scanf("%s", cmd);
 
-       if (strncmp(cmd, "login", 5)) {
+       if (strncmp(cmd, "login", 5) == 0) {
            dh.cmd = (int)CMD_LOGIN;
            dh.length = sizeof(Login);
 
