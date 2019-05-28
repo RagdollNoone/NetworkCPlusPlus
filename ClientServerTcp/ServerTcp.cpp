@@ -122,50 +122,49 @@ main(void) {
     LogoutResult logoutResult;
     memset(&logoutResult, 0, sizeof(logoutResult));
 
+    sin_size = sizeof(their_addr);
+    new_fd = accept(sockfd, (sockaddr *)&their_addr, &sin_size);
+    if (new_fd == -1) {
+        perror("accept");
+    }
+
+    inet_ntop(their_addr.ss_family, get_in_addr((sockaddr *)&their_addr), s, sizeof(s));
+    printf("server: got connection from %s\n", s);
+
     while(true) {
-        sin_size = sizeof(their_addr);
-        new_fd = accept(sockfd, (sockaddr *)&their_addr, &sin_size);
-        if (new_fd == -1) {
-            perror("accept");
-            continue;
-        }
-
-        inet_ntop(their_addr.ss_family, get_in_addr((sockaddr *)&their_addr), s, sizeof(s));
-        printf("server: got connection from %s\n", s);
-
         if ((nbytes = recv(new_fd, (char *)&dh, sizeof(DataHeader), 0)) == -1) {
-
+            printf("Recv DataHeader fail\n");
         } else {
             if (dh.cmd == CMD_LOGIN) {
 
                 if ((nbytes = recv(new_fd, (char *)&login, sizeof(Login), 0)) == -1) {
-                    printf("Recv Login fail");
+                    printf("Recv Login fail\n");
                     loginResult.result = 1;
                 } else {
-                    printf("Recv Login success, \nuserName is : %s\npassword is : %s\n", login.userName, login.password);
+                    printf("Recv Login success, userName is : %s password is : %s\n", login.userName, login.password);
                     loginResult.result = 0;
                 }
 
                 if ((nbytes = send(new_fd, (char *)&loginResult, sizeof(loginResult), 0)) == -1) {
-                    printf("Send LoginResult fail");
+                    printf("Send LoginResult fail\n");
                 } else {
-                    printf("Send LoginResult success, \nresult is : %d", loginResult.result);
+                    printf("Send LoginResult success, result is : %d\n", loginResult.result);
                 }
 
             } else if (dh.cmd == CMD_LOGOUT) {
 
                 if ((nbytes = recv(new_fd, (char *)&logout, sizeof(Logout), 0)) == -1) {
-                    printf("Recv Logout fail");
+                    printf("Recv Logout fail\n");
                     logoutResult.result = 1;
                 } else {
-                    printf("Recv Logout success, \nuserName is : %s\npassword is : %s\n", login.userName, login.password);
+                    printf("Recv Logout success, userName is : %s\n", logout.userName);
                     logoutResult.result = 0;
                 }
 
                 if ((nbytes = send(new_fd, (char *)&logoutResult, sizeof(logoutResult), 0)) == -1) {
-                    printf("Send LogoutResult fail");
+                    printf("Send LogoutResult fail\n");
                 } else {
-                    printf("Send LogoutResult success, \nresult is : %d", logoutResult.result);
+                    printf("Send LogoutResult success, result is : %d\n", logoutResult.result);
                 }
 
             }

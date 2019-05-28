@@ -107,12 +107,12 @@ main(int argc, char *argv[]) {
         scanf("%s", cmd);
 
        if (strncmp(cmd, "login", 5)) {
-           dh.cmd = CMD_LOGIN;
+           dh.cmd = (int)CMD_LOGIN;
            dh.length = sizeof(Login);
 
            numbytes = send(sockfd, (char *)&dh, sizeof(DataHeader), 0);
            if (numbytes == -1) {
-               printf("Send Login DataHeader fail");
+               printf("Send Login DataHeader fail\n");
            } else {
                printf("Send Login DataHeader success,\ncmd value is : %d\nlength is : %d\n", dh.cmd, dh.length);
            }
@@ -122,26 +122,26 @@ main(int argc, char *argv[]) {
 
            numbytes = send(sockfd, (char *)&login, sizeof(Login), 0);
            if (numbytes == -1) {
-               printf("Send Login fail");
+               printf("Send Login fail\n");
            } else {
                printf("Send Login success, \nuserName is : %s\npassword is : %s\n", login.userName, login.password);
            }
 
            numbytes = recv(sockfd, (char *)&loginResult, sizeof(LoginResult), 0);
            if (numbytes == -1) {
-               printf("Recv LoginResult fail");
+               printf("Recv LoginResult fail\n");
            } else {
                printf("Recv LoginResult success, \nresult is : %d\n", loginResult.result);
            }
 
 
        } else if (strncmp(cmd, "logout", 6) == 0) {
-           dh.cmd = CMD_LOGOUT;
+           dh.cmd = (int)CMD_LOGOUT;
            dh.length = sizeof(Logout);
 
            numbytes = send(sockfd, (char *)&dh, sizeof(DataHeader), 0);
            if (numbytes == -1) {
-               printf("Send Logout DataHeader fail");
+               printf("Send Logout DataHeader fail\n");
            } else {
                printf("Send Logout DataHeader success, \ncmd value is : %d\nlength is : %d\n", dh.cmd, dh.length);
            }
@@ -150,20 +150,20 @@ main(int argc, char *argv[]) {
 
            numbytes = send(sockfd, (char *)&logout, sizeof(Logout), 0);
            if (numbytes == -1) {
-               printf("Send Logout fail");
+               printf("Send Logout fail\n");
            } else {
                printf("Send Logout success, \nuserName is : %s\n", logout.userName);
            }
 
            numbytes = recv(sockfd, (char *)&logoutResult, sizeof(LogoutResult), 0);
            if (numbytes == -1) {
-               printf("Recv LogoutResult fail");
+               printf("Recv LogoutResult fail\n");
            } else {
                printf("Recv LogoutResult success, \nresult is : %d\n", logoutResult.result);
            }
 
        } else {
-           printf("Please input login or logout");
+           printf("Please input login or logout\n");
 
        }
     }
