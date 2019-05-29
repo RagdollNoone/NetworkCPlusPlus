@@ -21,12 +21,14 @@
 
 #define BACKLOG 10
 
-DataHeader dh;
-Login login;
-LoginResult loginResult;
-Logout logout;
-LogoutResult logoutResult;
+LoginResult *loginResult = new LoginResult;
+Join *join = new Join();
+Message *message = new Message();
+
+char recvBuf[1024];
 char remoteIP[INET6_ADDRSTRLEN];
+int listenfd;
+
 
 void
 sigchild_handler(int s) {
@@ -47,19 +49,6 @@ get_in_addr(sockaddr *sa) {
     }
 
     return &(((sockaddr_in6 *)sa)->sin6_addr);
-}
-
-void
-constructMessage(DataHeader &dh,
-        Login &login, LoginResult &loginResult,
-        Logout &logout, LogoutResult &logoutResult) {
-
-    memset(&dh, 0, sizeof(DataHeader));
-    memset(&login, 0, sizeof(Login));
-    memset(&loginResult, 0, sizeof(LoginResult));
-    memset(&logout, 0, sizeof(Logout));
-    memset(&logoutResult, 0, sizeof(logoutResult));
-
 }
 
 int
@@ -94,9 +83,35 @@ selectClose(int sockfd, fd_set &master) {
 void
 selectProcessor(int new_fd, fd_set &master) {
     int nbytes;
-    if ((nbytes = recv(new_fd, (char *)&dh, sizeof(DataHeader), 0)) == -1) {
-        printf("Recv DataHeader fail\n");
+    if ((nbytes = recv(new_fd, (char *)&recvBuf, sizeof(recvBuf), 0)) == -1) {
+        printf("Analysis DataHeader fail\n");
     } else {
+        DataHeader *dh = (DataHeader *)recvBuf;
+
+        switch (dh->cmd) {
+            case CMD_LOGIN:
+                Login *login = (Login *)recvBuf;
+                printf("Recv Login success, userName is : %s password is : %s\n", login.userName, login.passWord);
+
+                loginResult->result = 0;
+                send(new_fd, (char *)login, sizeof(LoginResult), 0);
+
+
+
+
+                break;
+            case CMD_MESSAGE:
+                break;
+            case CMD_EXIT:
+                break;
+            default:
+                break;
+        }
+
+
+
+
+
         if (dh.cmd == CMD_LOGIN) {
             nbytes = recv(new_fd, (char *)&login, sizeof(Login), 0);
 
@@ -140,7 +155,6 @@ selectProcessor(int new_fd, fd_set &master) {
 
 int
 main(void) {
-    int sockfd;
     addrinfo hints, *servinfo, *p;
     struct sigaction sa;
     int yes = 1;
@@ -148,11 +162,13 @@ main(void) {
     int rv;
 
     fd_set master;
-    fd_set read_fds;
+    fd_set listen_fds;
+    fd_set process_fds;
     int fdmax;
 
     FD_ZERO(&master);
-    FD_ZERO(&read_fds);
+    FD_ZERO(&listen_fds);
+    FD_ZERO(&process_fds);
 
     memset(&hints, 0, sizeof(hints));
     hints.ai_family = AF_UNSPEC;
@@ -165,19 +181,19 @@ main(void) {
     }
 
     for (p = servinfo; p != NULL; p = p->ai_next) {
-        if ((sockfd = socket(p->ai_family, p->ai_socktype, p->ai_protocol)) == -1) {
+        if ((listenfd = socket(p->ai_family, p->ai_socktype, p->ai_protocol)) == -1) {
             perror("server socket");
             continue;
         }
 
         // 处理端口被占用的情况
-        if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int)) == -1) {
+        if (setsockopt(, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int)) == -1) {
             perror("setsockopt");
             exit(2);
         }
 
-        if (bind(sockfd, p->ai_addr, p->ai_addrlen) == -1) {
-            close(sockfd);
+        if (bind(listenfd, p->ai_addr, p->ai_addrlen) == -1) {
+            close(listenfd);
             perror("server: bind");
             continue;
         }
@@ -192,13 +208,13 @@ main(void) {
         exit(3);
     }
 
-    if (listen(sockfd, BACKLOG) == -1) {
+    if (listen(listenfd, BACKLOG) == -1) {
         perror("listen");
         exit(4);
     }
 
-    FD_SET(sockfd, &master);
-    fdmax = sockfd;
+    FD_SET(listenfd, &listen_fds);
+    fdmax = listenfd;
 
     sa.sa_handler = sigchild_handler;
     sigemptyset(&sa.sa_mask);
@@ -210,27 +226,30 @@ main(void) {
 
     printf("server: waiting for connections...\n");
 
-    constructMessage(dh, login, loginResult, logout, logoutResult);
-
     while(true) {
-        read_fds = master;
-        int nready = select(fdmax + 1, &read_fds, NULL, NULL, NULL);
+        timeval t = {1, 0};
+
+        master = process_fds;
+        int nready = select(fdmax + 1, &master, NULL, NULL, &t);
         if (nready == -1) {
-            perror("select");
+            perror("select process");
             exit(5);
         }
 
         for (int i = 0; i <= fdmax; i++) {
-            if (FD_ISSET(i, &read_fds) && i != sockfd) {
+            if (FD_ISSET(i, &master)) {
                 selectProcessor(i, master);
-                nready--;
             }
         }
 
-        while (nready > 0) {
-            selectAccept(sockfd, master, fdmax);
-            nready--;
+        master = listen_fds;
+        nready = select(fdmax + 1, &master, NULL, NULL, &t);
+        if (nready == -1) {
+            perror("select listen");
+            exit(6);
         }
+
+        selectAccept(listenfd, master, fdmax);
     }
 
     return 0;
