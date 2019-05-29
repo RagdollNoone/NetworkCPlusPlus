@@ -85,16 +85,26 @@ selectAccept(int sockfd, fd_set &master, int &fdmax) {
     return new_fd;
 }
 
-void selectProcessor(int new_fd) {
+void
+selectClose(int sockfd, fd_set &master) {
+    close(sockfd);
+    FD_CLR(sockfd, &master);
+}
+
+void
+selectProcessor(int new_fd, fd_set &master) {
     int nbytes;
     if ((nbytes = recv(new_fd, (char *)&dh, sizeof(DataHeader), 0)) == -1) {
         printf("Recv DataHeader fail\n");
     } else {
         if (dh.cmd == CMD_LOGIN) {
+            nbytes = recv(new_fd, (char *)&login, sizeof(Login), 0);
 
-            if ((nbytes = recv(new_fd, (char *)&login, sizeof(Login), 0)) == -1) {
+            if (nbytes == -1) {
                 printf("Recv Login fail\n");
                 loginResult.result = 1;
+            } else if (nbytes == 0) {
+                selectClose(new_fd, master);
             } else {
                 printf("Recv Login success, userName is : %s password is : %s\n", login.userName, login.password);
                 loginResult.result = 0;
@@ -107,10 +117,12 @@ void selectProcessor(int new_fd) {
             }
 
         } else if (dh.cmd == CMD_LOGOUT) {
-
-            if ((nbytes = recv(new_fd, (char *)&logout, sizeof(Logout), 0)) == -1) {
+            nbytes = recv(new_fd, (char *)&logout, sizeof(Logout), 0);
+            if (nbytes == -1) {
                 printf("Recv Logout fail\n");
                 logoutResult.result = 1;
+            } else if (nbytes == 0) {
+                selectClose(new_fd, master);
             } else {
                 printf("Recv Logout success, userName is : %s\n", logout.userName);
                 logoutResult.result = 0;
@@ -202,23 +214,23 @@ main(void) {
 
     while(true) {
         read_fds = master;
-        if (select(fdmax + 1, &read_fds, NULL, NULL, NULL) == -1) {
+        int nready = select(fdmax + 1, &read_fds, NULL, NULL, NULL);
+        if (nready == -1) {
             perror("select");
             exit(5);
         }
 
         for (int i = 0; i <= fdmax; i++) {
-            if (i == sockfd) {
-                selectAccept(sockfd, master, fdmax);
-            } else {
-                if (FD_ISSET(i, &read_fds)) {
-                    selectProcessor(i);
-                }
+            if (FD_ISSET(i, &read_fds) && i != sockfd) {
+                selectProcessor(i, master);
+                nready--;
             }
         }
 
-
-
+        while (nready > 0) {
+            selectAccept(sockfd, master, fdmax);
+            nready--;
+        }
     }
 
     return 0;
