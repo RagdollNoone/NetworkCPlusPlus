@@ -22,8 +22,14 @@ struct DataHeader {
 struct Login : public DataHeader{
 public:
     Login() {
+        clear();
+    }
+
+    void clear() {
         cmd = CMD_LOGIN;
         length = sizeof(Login);
+        memset(userName, 0, sizeof(userName));
+        memset(passWord, 0, sizeof(passWord));
     }
 
     char userName[32];
@@ -78,8 +84,13 @@ public:
 struct Exit : public DataHeader {
 public:
     Exit() {
+        clear();
+    }
+
+    void clear() {
         cmd = CMD_EXIT;
         length = sizeof(Exit);
+        memset(userName, 0, sizeof(userName));
     }
 
     char userName[32];

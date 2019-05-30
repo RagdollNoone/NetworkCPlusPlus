@@ -22,8 +22,11 @@ add_executable(
 #        Pack/Pack.cpp
 #        Pack/Pack.h
 #        Message/Message.h
-        Network Server51.cpp
-#        Client51.cpp
+#        Network Server51.cpp
+        Network Client51.cpp
 #        Utils.cpp
 #        Utils.h
 )
+
+find_package(Threads REQUIRED)
+target_link_libraries(Network Threads::Threads)

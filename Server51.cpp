@@ -24,6 +24,7 @@
 LoginResult *loginResult = new LoginResult;
 Join *join = new Join();
 Message *message = new Message();
+NotifyExit *notifyExit = new NotifyExit();
 
 char recvBuf[1024];
 char remoteIP[INET6_ADDRSTRLEN];
@@ -81,74 +82,69 @@ selectClose(int sockfd, fd_set &master) {
 }
 
 void
-selectProcessor(int new_fd, fd_set &master) {
-    int nbytes;
-    if ((nbytes = recv(new_fd, (char *)&recvBuf, sizeof(recvBuf), 0)) == -1) {
+selectProcessor(int new_fd, fd_set &master, const int fdmax) {
+    int nbytes = recv(new_fd, (char *)&recvBuf, sizeof(recvBuf), 0);
+    if (nbytes == -1) {
         printf("Analysis DataHeader fail\n");
     } else {
         DataHeader *dh = (DataHeader *)recvBuf;
 
         switch (dh->cmd) {
-            case CMD_LOGIN:
-                Login *login = (Login *)recvBuf;
-                printf("Recv Login success, userName is : %s password is : %s\n", login.userName, login.passWord);
+            case CMD_LOGIN: {
+                // 接收登陆消息
+                Login *login = (Login *) recvBuf;
+                printf("Recv Login success, userName is : %s password is : %s\n", login->userName, login->passWord);
 
+                // 发送回包给客户端
                 loginResult->result = 0;
-                send(new_fd, (char *)login, sizeof(LoginResult), 0);
+                send(new_fd, (char *) loginResult, sizeof(LoginResult), 0);
 
-
-
+                // 发送登陆消息给其他客户端
+                for (int i = 0; i < fdmax; i++) {
+                    if (FD_ISSET(i, &master) && i != new_fd && i != listenfd) {
+                        strcpy(join->userName, login->userName);
+                        send(i, (char *) join, sizeof(Join), 0);
+                    }
+                }
 
                 break;
-            case CMD_MESSAGE:
+            }
+            case CMD_MESSAGE: {
+                // 接收消息内容
+                Message *recvMsg = (Message *) recvBuf;
+                printf("Recv Message success, content is : %s\n", recvMsg->content);
+
+                // 发送给其他客户端
+                for (int i = 0; i < fdmax; i++) {
+                    if (FD_ISSET(i, &master) && i != new_fd && i != listenfd) {
+                        message->clear();
+                        strcpy(message->content, recvMsg->content);
+                        send(i, (char *) message, sizeof(Message), 0);
+                    }
+                }
+
                 break;
-            case CMD_EXIT:
+            }
+            case CMD_EXIT: {
+                // 接收退出消息
+                Exit *exit = (Exit *) recvBuf;
+                printf("Recv Exit success, userName is : %s\n", exit->userName);
+
+                selectClose(new_fd, master);
+
+                // 发送给其他客户端
+                for (int i = 0; i < fdmax; i++) {
+                    if (FD_ISSET(i, &master) && i != new_fd && i != listenfd) {
+                        notifyExit->clear();
+                        strcpy(notifyExit->userName, exit->userName);
+                        send(i, (char *) notifyExit, sizeof(NotifyExit), 0);
+                    }
+                }
+
                 break;
+            }
             default:
                 break;
-        }
-
-
-
-
-
-        if (dh.cmd == CMD_LOGIN) {
-            nbytes = recv(new_fd, (char *)&login, sizeof(Login), 0);
-
-            if (nbytes == -1) {
-                printf("Recv Login fail\n");
-                loginResult.result = 1;
-            } else if (nbytes == 0) {
-                selectClose(new_fd, master);
-            } else {
-                printf("Recv Login success, userName is : %s password is : %s\n", login.userName, login.password);
-                loginResult.result = 0;
-            }
-
-            if ((nbytes = send(new_fd, (char *)&loginResult, sizeof(loginResult), 0)) == -1) {
-                printf("Send LoginResult fail\n");
-            } else {
-                printf("Send LoginResult success, result is : %d\n", loginResult.result);
-            }
-
-        } else if (dh.cmd == CMD_LOGOUT) {
-            nbytes = recv(new_fd, (char *)&logout, sizeof(Logout), 0);
-            if (nbytes == -1) {
-                printf("Recv Logout fail\n");
-                logoutResult.result = 1;
-            } else if (nbytes == 0) {
-                selectClose(new_fd, master);
-            } else {
-                printf("Recv Logout success, userName is : %s\n", logout.userName);
-                logoutResult.result = 0;
-            }
-
-            if ((nbytes = send(new_fd, (char *)&logoutResult, sizeof(logoutResult), 0)) == -1) {
-                printf("Send LogoutResult fail\n");
-            } else {
-                printf("Send LogoutResult success, result is : %d\n", logoutResult.result);
-            }
-
         }
     }
 }
@@ -162,13 +158,11 @@ main(void) {
     int rv;
 
     fd_set master;
-    fd_set listen_fds;
-    fd_set process_fds;
+    fd_set branch;
     int fdmax;
 
     FD_ZERO(&master);
-    FD_ZERO(&listen_fds);
-    FD_ZERO(&process_fds);
+    FD_ZERO(&branch);
 
     memset(&hints, 0, sizeof(hints));
     hints.ai_family = AF_UNSPEC;
@@ -187,7 +181,7 @@ main(void) {
         }
 
         // 处理端口被占用的情况
-        if (setsockopt(, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int)) == -1) {
+        if (setsockopt(listenfd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int)) == -1) {
             perror("setsockopt");
             exit(2);
         }
@@ -213,7 +207,7 @@ main(void) {
         exit(4);
     }
 
-    FD_SET(listenfd, &listen_fds);
+    FD_SET(listenfd, &master);
     fdmax = listenfd;
 
     sa.sa_handler = sigchild_handler;
@@ -227,29 +221,24 @@ main(void) {
     printf("server: waiting for connections...\n");
 
     while(true) {
-        timeval t = {1, 0};
-
-        master = process_fds;
-        int nready = select(fdmax + 1, &master, NULL, NULL, &t);
+        branch = master;
+        int nready = select(fdmax + 1, &branch, NULL, NULL, NULL);
         if (nready == -1) {
-            perror("select process");
+            perror("select listen");
             exit(5);
         }
 
         for (int i = 0; i <= fdmax; i++) {
-            if (FD_ISSET(i, &master)) {
-                selectProcessor(i, master);
+            if (FD_ISSET(i, &branch) && i != listenfd) {
+                selectProcessor(i, master, fdmax);
+                nready--;
             }
         }
 
-        master = listen_fds;
-        nready = select(fdmax + 1, &master, NULL, NULL, &t);
-        if (nready == -1) {
-            perror("select listen");
-            exit(6);
+        while (nready > 0) {
+            selectAccept(listenfd, master, fdmax);
+            nready--;
         }
-
-        selectAccept(listenfd, master, fdmax);
     }
 
     return 0;

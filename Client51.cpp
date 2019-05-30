@@ -13,12 +13,25 @@
 #include <sys/socket.h>
 
 #include <arpa/inet.h>
+#include <thread>
 
 #include "Message/Message.h"
 
 #define PORT "3490"
 
 #define MAXDATASIZE 100
+
+Message *message = new Message();
+Login *login = new Login();
+Exit *ex = new Exit();
+
+char recvBuf[1024];
+char cmd[256];
+
+int numbytes;
+
+char userName[32];
+char passWord[32];
 
 void *
 get_in_addr(sockaddr *sa) {
@@ -29,18 +42,93 @@ get_in_addr(sockaddr *sa) {
     return  &(((sockaddr_in6 *)sa)->sin6_addr);
 }
 
+void
+msgProcessor(int sockfd) {
+    numbytes = recv(sockfd, (char *)&recvBuf, sizeof(recvBuf), 0);
+    if (numbytes == -1) {
+
+    } else {
+        DataHeader *dh = (DataHeader *) recvBuf;
+        switch (dh->cmd) {
+            case CMD_LOGIN_RESULT: {
+                LoginResult *loginResult = (LoginResult *) recvBuf;
+                printf("Recv LoginResult success, result is : %d\n", loginResult->result);
+                break;
+            }
+            case CMD_JOIN: {
+                Join *join = (Join *) recvBuf;
+                printf("Recv Join success, userName is : %s\n", join->userName);
+                break;
+            }
+            case CMD_MESSAGE: {
+                Message *message = (Message *) recvBuf;
+                printf("Recv Message success, content is : %s\n", message->content);
+                break;
+            }
+            case CMD_NOTIFY_EXIT: {
+                NotifyExit *notifyExit = (NotifyExit *) recvBuf;
+                printf("Recv NotifyExit success, userName is : %s\n", notifyExit->userName);
+                break;
+            }
+            default:
+                break;
+        }
+    }
+}
+
+void
+scanProcessor(int sockfd, fd_set &master) {
+    while(true) {
+        printf("Please input the cmd: ");
+        scanf("%s", cmd);
+
+        if (strncmp(cmd, "login", 5) == 0) {
+            login->clear();
+            strncpy(login->userName, userName, sizeof(login->userName));
+            strncpy(login->passWord, passWord, sizeof(login->passWord));
+
+            numbytes = send(sockfd, (char *) &login, sizeof(Login), 0);
+            if (numbytes == -1) {
+                printf("Send Login fail\n");
+            } else {
+                printf("Send Login success, userName is : %s password is : %s\n", login->userName, login->passWord);
+            }
+        } else if (strncmp(cmd, "ex", 4) == 0) {
+            ex->clear();
+            strncpy(ex->userName, userName, sizeof(ex->userName));
+
+            numbytes = send(sockfd, (char *) ex, sizeof(Exit), 0);
+            if (numbytes == -1) {
+                printf("Send Exit fail\n");
+            } else {
+                printf("Send Exit success, userName is : %s\n", ex->userName);
+            }
+
+            close(sockfd);
+            FD_CLR(sockfd, &master);
+            exit(3);
+        } else {
+            message->clear();
+            strncpy(message->content, cmd, sizeof(message->content));
+
+            numbytes = send(sockfd, (char *) message, sizeof(Message), 0);
+            if (numbytes == -1) {
+                printf("Send Message fail\n");
+            } else {
+                printf("Send Message success, content is : %s\n", message->content);
+            }
+        }
+    }
+}
+
+
 int
 main(int argc, char *argv[]) {
-    int sockfd, numbytes;
+    int sockfd;
     char buf[MAXDATASIZE];
     addrinfo hints, *servinfo, *p;
     int rv;
     char s[INET6_ADDRSTRLEN];
-
-    char userName[32];
-    char passWord[32];
-    char cmd[32];
-
 
     if (argc != 4) {
         fprintf(stderr, "usage: client hostname username and password\n");
@@ -52,13 +140,20 @@ main(int argc, char *argv[]) {
 
     printf("userName is : %s\npassword is : %s\n", userName, passWord);
 
+    fd_set master;
+    fd_set branch;
+    int fdmax;
+
+    FD_ZERO(&master);
+    FD_ZERO(&branch);
+
     memset(&hints, 0, sizeof(hints));
     hints.ai_family = AF_UNSPEC;
     hints.ai_socktype = SOCK_STREAM;
 
     if ((rv = getaddrinfo(argv[1], PORT, &hints, &servinfo)) != 0) {
         fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(rv));
-        return 1;
+        exit(1);
     }
 
     for (p = servinfo; p != NULL; p = p->ai_next) {
@@ -78,94 +173,24 @@ main(int argc, char *argv[]) {
 
     if (NULL == p) {
         fprintf(stderr, "client: failed to connect\n");
-        return 2;
+        exit(2);
     }
 
     inet_ntop(p->ai_family, get_in_addr((sockaddr *)p->ai_addr), s, sizeof(s));
-
     printf("client: connecting to %s\n", s);
 
     freeaddrinfo(servinfo);
 
-    DataHeader dh;
-    memset(&dh, 0, sizeof(DataHeader));
+    FD_SET(sockfd, &master);
+    fdmax = sockfd;
 
-    Login login;
-    memset(&login, 0, sizeof(Login));
+    std::thread tScan(scanProcessor, sockfd, std::ref(master));
 
-    LoginResult loginResult;
-    memset(&loginResult, 0, sizeof(LoginResult));
-
-    Logout logout;
-    memset(&logout, 0, sizeof(Logout));
-
-    LogoutResult logoutResult;
-    memset(&logoutResult, 0, sizeof(logoutResult));
-
+    int nready;
     while(true) {
-        printf("Please input the cmd: ");
-        scanf("%s", cmd);
-
-        if (strncmp(cmd, "login", 5) == 0) {
-            dh.cmd = (int)CMD_LOGIN;
-            dh.length = sizeof(Login);
-
-            numbytes = send(sockfd, (char *)&dh, sizeof(DataHeader), 0);
-            if (numbytes == -1) {
-                printf("Send Login DataHeader fail\n");
-            } else {
-                printf("Send Login DataHeader success,\ncmd value is : %d\nlength is : %d\n", dh.cmd, dh.length);
-            }
-
-            strncpy(login.userName, userName, sizeof(login.userName));
-            strncpy(login.password, passWord, sizeof(login.password));
-
-            numbytes = send(sockfd, (char *)&login, sizeof(Login), 0);
-            if (numbytes == -1) {
-                printf("Send Login fail\n");
-            } else {
-                printf("Send Login success, \nuserName is : %s\npassword is : %s\n", login.userName, login.password);
-            }
-
-            numbytes = recv(sockfd, (char *)&loginResult, sizeof(LoginResult), 0);
-            if (numbytes == -1) {
-                printf("Recv LoginResult fail\n");
-            } else {
-                printf("Recv LoginResult success, \nresult is : %d\n", loginResult.result);
-            }
-
-
-        } else if (strncmp(cmd, "logout", 6) == 0) {
-            dh.cmd = (int)CMD_LOGOUT;
-            dh.length = sizeof(Logout);
-
-            numbytes = send(sockfd, (char *)&dh, sizeof(DataHeader), 0);
-            if (numbytes == -1) {
-                printf("Send Logout DataHeader fail\n");
-            } else {
-                printf("Send Logout DataHeader success, \ncmd value is : %d\nlength is : %d\n", dh.cmd, dh.length);
-            }
-
-            strncpy(logout.userName, userName, sizeof(logout.userName));
-
-            numbytes = send(sockfd, (char *)&logout, sizeof(Logout), 0);
-            if (numbytes == -1) {
-                printf("Send Logout fail\n");
-            } else {
-                printf("Send Logout success, \nuserName is : %s\n", logout.userName);
-            }
-
-            numbytes = recv(sockfd, (char *)&logoutResult, sizeof(LogoutResult), 0);
-            if (numbytes == -1) {
-                printf("Recv LogoutResult fail\n");
-            } else {
-                printf("Recv LogoutResult success, \nresult is : %d\n", logoutResult.result);
-            }
-
-        } else {
-            printf("Please input login or logout\n");
-
-        }
+        branch = master;
+        nready = select(fdmax + 1, &branch, NULL, NULL, NULL);
+        msgProcessor(sockfd);
     }
 
     close(sockfd);
