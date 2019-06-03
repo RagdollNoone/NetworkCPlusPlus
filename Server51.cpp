@@ -97,13 +97,22 @@ selectProcessor(int new_fd, fd_set &master, const int fdmax) {
 
                 // 发送回包给客户端
                 loginResult->result = 0;
-                send(new_fd, (char *) loginResult, sizeof(LoginResult), 0);
+                nbytes = send(new_fd, (char *) loginResult, sizeof(LoginResult), 0);
+                nbytes == -1 ? printf("Send LoginResult fail\n" ) : printf("Send LoginResult success\n" );
+
 
                 // 发送登陆消息给其他客户端
-                for (int i = 0; i < fdmax; i++) {
+                printf("fdmax is %d\n", fdmax);
+                printf("new_fd is %d\n", new_fd);
+                printf("listenfd is %d\n", listenfd);
+                for (int i = 0; i <= fdmax; i++) {
+                    printf("a\n");
+                    printf("%d\n", FD_ISSET(i, &master));
                     if (FD_ISSET(i, &master) && i != new_fd && i != listenfd) {
+                        printf("b\n");
                         strcpy(join->userName, login->userName);
-                        send(i, (char *) join, sizeof(Join), 0);
+                        nbytes = send(i, (char *) join, sizeof(Join), 0);
+                        nbytes == -1 ? printf("Send Join fail\n" ) : printf("Send Join success\n" );
                     }
                 }
 
@@ -115,11 +124,12 @@ selectProcessor(int new_fd, fd_set &master, const int fdmax) {
                 printf("Recv Message success, content is : %s\n", recvMsg->content);
 
                 // 发送给其他客户端
-                for (int i = 0; i < fdmax; i++) {
+                for (int i = 0; i <= fdmax; i++) {
                     if (FD_ISSET(i, &master) && i != new_fd && i != listenfd) {
                         message->clear();
                         strcpy(message->content, recvMsg->content);
-                        send(i, (char *) message, sizeof(Message), 0);
+                        nbytes = send(i, (char *) message, sizeof(Message), 0);
+                        nbytes == -1 ? printf("Send Message fail\n" ) : printf("Send Message success\n" );
                     }
                 }
 
@@ -133,11 +143,12 @@ selectProcessor(int new_fd, fd_set &master, const int fdmax) {
                 selectClose(new_fd, master);
 
                 // 发送给其他客户端
-                for (int i = 0; i < fdmax; i++) {
+                for (int i = 0; i <= fdmax; i++) {
                     if (FD_ISSET(i, &master) && i != new_fd && i != listenfd) {
                         notifyExit->clear();
                         strcpy(notifyExit->userName, exit->userName);
-                        send(i, (char *) notifyExit, sizeof(NotifyExit), 0);
+                        nbytes = send(i, (char *) notifyExit, sizeof(NotifyExit), 0);
+                        nbytes == -1 ? printf("Send Message fail\n" ) : printf("Send Message success\n" );
                     }
                 }
 
