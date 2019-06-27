@@ -84,8 +84,11 @@ selectClose(int sockfd, fd_set &master) {
 void
 selectProcessor(int new_fd, fd_set &master, const int fdmax) {
     int nbytes = recv(new_fd, (char *)&recvBuf, sizeof(recvBuf), 0);
-    if (nbytes == -1) {
-        printf("Analysis DataHeader fail\n");
+    if (nbytes < 0) {
+        printf("Server recv error\n");
+    } else if (nbytes == 0) {
+        printf("A Client disconnect\n");
+        selectClose(new_fd, master);
     } else {
         DataHeader *dh = (DataHeader *)recvBuf;
 
@@ -100,16 +103,9 @@ selectProcessor(int new_fd, fd_set &master, const int fdmax) {
                 nbytes = send(new_fd, (char *) loginResult, sizeof(LoginResult), 0);
                 nbytes == -1 ? printf("Send LoginResult fail\n" ) : printf("Send LoginResult success\n" );
 
-
                 // 发送登陆消息给其他客户端
-                printf("fdmax is %d\n", fdmax);
-                printf("new_fd is %d\n", new_fd);
-                printf("listenfd is %d\n", listenfd);
                 for (int i = 0; i <= fdmax; i++) {
-                    printf("a\n");
-                    printf("%d\n", FD_ISSET(i, &master));
                     if (FD_ISSET(i, &master) && i != new_fd && i != listenfd) {
-                        printf("b\n");
                         strcpy(join->userName, login->userName);
                         nbytes = send(i, (char *) join, sizeof(Join), 0);
                         nbytes == -1 ? printf("Send Join fail\n" ) : printf("Send Join success\n" );

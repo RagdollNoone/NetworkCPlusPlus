@@ -44,10 +44,12 @@ get_in_addr(sockaddr *sa) {
 
 void
 msgProcessor(int sockfd) {
-    printf("do msgProcessor...\n");
     numbytes = recv(sockfd, (char *)&recvBuf, sizeof(recvBuf), 0);
-    if (numbytes == -1) {
-
+    if (numbytes < 0) {
+        printf("Client recv error\n");
+    } else if (numbytes == 0) {
+        printf("Server disconnect\n");
+        exit(3);
     } else {
         DataHeader *dh = (DataHeader *) recvBuf;
         switch (dh->cmd) {
