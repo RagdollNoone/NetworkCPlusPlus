@@ -240,15 +240,13 @@ main(void) {
         }
 
         for (int i = 0; i <= fdmax; i++) {
-            if (FD_ISSET(i, &branch) && i != listenfd) {
-                selectProcessor(i, master, fdmax);
-                nready--;
+            if (FD_ISSET(i, &branch) ) {
+                if (i != listenfd) {
+                    selectProcessor(i, master, fdmax);
+                } else {
+                    selectAccept(listenfd, master, fdmax);
+                }
             }
-        }
-
-        while (nready > 0) {
-            selectAccept(listenfd, master, fdmax);
-            nready--;
         }
     }
 
