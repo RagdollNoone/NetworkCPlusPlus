@@ -7,6 +7,8 @@
 #include <stdlib.h>
 #include <netinet/in.h>
 #include <string.h>
+#include "NetWorkFirstTry.h"
+
 #define PORT 21001
 
 void
@@ -16,7 +18,7 @@ NetWorkFirstTry() {
     int opt = 1;
     int addrlen = sizeof(address);
     char buffer[1024] = {0};
-    char *hello = "Hello from server";
+    char *hello = (char *)"Hello from server";
 
     // Creating socket file descriptor
     if ((server_fd = socket(AF_INET, SOCK_STREAM, 0)) == 0)

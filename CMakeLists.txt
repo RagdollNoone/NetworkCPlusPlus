@@ -3,30 +3,11 @@ project(Network)
 
 set(CMAKE_CXX_STANDARD 14)
 
-add_executable(
-#        Network main.cpp
-#        NetWorkFirstTry/NetWorkFirstTry.cpp
-#        NetWorkFirstTry/NetWorkFirstTry.h
-#        ShowIp/ShowIp.cpp
-#        ShowIp/ShowIp.h
-#        ClientServerTcp/ServerTcp.cpp
-#        ClientServerTcp/ClientTcp.cpp
-#        ClientServerUdp/ClientUdp.cpp
-#        ClientServerUdp/ServerUdp.cpp
-#        Select/SelectServer.cpp
-#        Select/Select.cpp
-#        SendControl/SendControl.cpp
-#        SendControl/SendControl.h
-#        Float/Float.cpp
-#        Float/Float.h
-#        Pack/Pack.cpp
-#        Pack/Pack.h
-#        Message/Message.h
-        Network Server51.cpp
-#        Network Client51.cpp
-#        Utils.cpp
-#        Utils.h
-)
+add_subdirectory(NetWorkFirstTry)
+add_subdirectory(Float)
+add_subdirectory(Pack)
+add_subdirectory(Select)
+add_subdirectory(SendControl)
+add_subdirectory(ShowIp)
+add_subdirectory(51Study)
 
-find_package(Threads REQUIRED)
-target_link_libraries(Network Threads::Threads)
