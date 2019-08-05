@@ -24,6 +24,7 @@
 #endif
 
 #include <stdio.h>
+#include <string>
 
 #define SOCKET int
 #define INVALID_SOCKET (SOCKET)(~0)
