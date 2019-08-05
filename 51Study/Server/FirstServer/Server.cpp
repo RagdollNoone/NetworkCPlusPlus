@@ -96,7 +96,7 @@ selectProcessor(int new_fd, fd_set &master, const int fdmax) {
             case CMD_LOGIN: {
                 // 接收登陆消息
                 Login *login = (Login *) recvBuf;
-                printf("Recv Login success, userName is : %s password is : %s\n", login->userName, login->passWord);
+                printf("Recv Login success, userName is : %s _password is : %s\n", login->userName, login->passWord);
 
                 // 发送回包给客户端
                 loginResult->result = 0;

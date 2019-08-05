@@ -94,7 +94,7 @@ scanProcessor(int sockfd, fd_set &master) {
             if (numbytes == -1) {
                 printf("Send Login fail\n");
             } else {
-                printf("Send Login success, userName is : %s password is : %s\n", login->userName, login->passWord);
+                printf("Send Login success, userName is : %s _password is : %s\n", login->userName, login->passWord);
             }
         } else if (strncmp(cmd, "exit", 4) == 0) {
             ex->clear();
@@ -134,14 +134,14 @@ main(int argc, char *argv[]) {
     char s[INET6_ADDRSTRLEN];
 
     if (argc != 4) {
-        fprintf(stderr, "usage: client hostname username and password\n");
+        fprintf(stderr, "usage: client hostname _username and _password\n");
         exit(1);
     }
 
     strncpy(userName, argv[2], sizeof(userName));
     strncpy(passWord, argv[3], sizeof(passWord));
 
-    printf("userName is : %s\npassword is : %s\n", userName, passWord);
+    printf("userName is : %s\n_password is : %s\n", userName, passWord);
 
     fd_set master;
     fd_set branch;

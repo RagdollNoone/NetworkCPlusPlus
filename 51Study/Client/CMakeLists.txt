@@ -1,2 +1,2 @@
 add_subdirectory(FirstClient)
-#add_subdirectory(EasyClient)
+add_subdirectory(EasyClient)

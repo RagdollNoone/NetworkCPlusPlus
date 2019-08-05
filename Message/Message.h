@@ -5,6 +5,8 @@
 #ifndef NETWORK_MESSAGE_H
 #define NETWORK_MESSAGE_H
 
+#include <string.h>
+
 enum CMD {
     CMD_LOGIN = 0,
     CMD_LOGIN_RESULT = 1,
