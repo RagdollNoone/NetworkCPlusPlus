@@ -131,13 +131,10 @@ sendData(DataHeader *msg) {
     if (isRun() && msg) {
         int ret = ::send(_socket, (const char*)msg, msg->length, 0);
 
-
-
-
         if (SOCKET_ERROR == ret) {
             printf("ERROR: send message fail...\n");
         } else {
-            printf("INFO: send message success, %s...\n", getTypeName(msg));
+            std::cout << "INFO: send message success, " << getTypeName(msg);
         }
 
         return ret;

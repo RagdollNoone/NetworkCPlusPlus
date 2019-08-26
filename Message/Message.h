@@ -5,7 +5,9 @@
 #ifndef NETWORK_MESSAGE_H
 #define NETWORK_MESSAGE_H
 
+#include <iostream>
 #include <string>
+#include <cstring>
 
 enum CMD {
     CMD_LOGIN = 0,
@@ -115,6 +117,7 @@ public:
 
 static std::string getTypeName(DataHeader *msg) {
     std::string typeName = "";
+
     switch (msg->cmd) {
         case 0: {
             typeName = "Login";
@@ -143,5 +146,7 @@ static std::string getTypeName(DataHeader *msg) {
         default:
             break;
     }
+
+    return typeName;
 }
 #endif //NETWORK_MESSAGE_H
